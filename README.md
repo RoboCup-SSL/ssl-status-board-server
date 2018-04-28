@@ -1,14 +1,14 @@
 # SSL Status Board - Server
 The server component of the RoboCup SSL status board implemented in Go
 
-You can find the client component here: https://github.com/g3force/ssl-status-board-client
+You can find the client component here: https://github.com/RoboCup-SSL/ssl-status-board-client
 
 ## Installation
 
 Simply go-get it:
 ```
-go get github.com/g3force/ssl-status-board-server
-go get github.com/g3force/ssl-status-board-server/ssl-status-board-proxy
+go get github.com/RoboCup-SSL/ssl-status-board-server
+go get github.com/RoboCup-SSL/ssl-status-board-server/ssl-status-board-proxy
 ```
 
 ## Run
