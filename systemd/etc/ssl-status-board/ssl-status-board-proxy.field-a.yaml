@@ -1,0 +1,6 @@
+ListenAddress: ":4202"
+SubscribePath: "/ssl-status/field-a/subscribe"
+PublishPath: "/ssl-status/field-a/publish"
+AuthCredentials:
+ - Username: "default"
+   Password: "default"
