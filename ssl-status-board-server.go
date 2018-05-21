@@ -1,15 +1,17 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
-	"net/http"
-	"log"
-	"encoding/json"
-	"fmt"
-	"time"
-	"net/url"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
+	"fmt"
+	"github.com/RoboCup-SSL/ssl-go-tools/sslproto"
+	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/websocket"
+	"log"
+	"net/http"
+	"net/url"
+	"time"
 )
 
 const maxDatagramSize = 8192
@@ -21,6 +23,9 @@ var upgrader = websocket.Upgrader{
 }
 
 var serverConfig ServerConfig
+var latestVisionDetection *sslproto.SSL_DetectionFrame
+var latestVisionGeometry *sslproto.SSL_GeometryData
+var lastTimeGeometrySend = time.Now()
 
 func echoHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -53,10 +58,24 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Client connected")
 
-	sendDataToWebSocket(conn)
+	sendRefereeDataToWebSocket(conn)
 }
 
-func sendDataToWebSocket(conn *websocket.Conn) {
+func visionHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer conn.Close()
+	defer log.Println("Client disconnected")
+
+	log.Println("Client connected")
+
+	sendVisionDataToWebSocket(conn)
+}
+
+func sendRefereeDataToWebSocket(conn *websocket.Conn) {
 	for {
 		b, err := json.Marshal(referee)
 		if err != nil {
@@ -67,7 +86,29 @@ func sendDataToWebSocket(conn *websocket.Conn) {
 			return
 		}
 
-		time.Sleep(serverConfig.SendingInterval)
+		time.Sleep(serverConfig.RefereeConnection.SendingInterval)
+	}
+}
+
+func sendVisionDataToWebSocket(conn *websocket.Conn) {
+	for {
+		wrapper := new(sslproto.SSL_WrapperPacket)
+		wrapper.Detection = latestVisionDetection
+		if latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > time.Second*5 {
+			lastTimeGeometrySend = time.Now()
+			wrapper.Geometry = latestVisionGeometry
+		}
+
+		b, err := proto.Marshal(wrapper)
+		if err != nil {
+			fmt.Println("Marshal error:", err)
+		}
+		if err := conn.WriteMessage(websocket.BinaryMessage, b); err != nil {
+			log.Println(err)
+			return
+		}
+
+		time.Sleep(serverConfig.VisionConnection.SendingInterval)
 	}
 }
 
@@ -86,7 +127,7 @@ func broadcastToProxy() error {
 	}
 	defer conn.Close()
 
-	sendDataToWebSocket(conn)
+	sendRefereeDataToWebSocket(conn)
 	return nil
 }
 
@@ -105,16 +146,18 @@ func main() {
 	configFile := flag.String("c", "server-config.yaml", "The config file to use")
 	flag.Parse()
 
-	serverConfig = ReadServerConfig(*configFile);
+	serverConfig = ReadServerConfig(*configFile)
 	log.Println("Server config:", serverConfig)
 
 	go handleIncomingRefereeMessages()
+	go handleIncomingVisionMessages()
 
 	if serverConfig.ServerProxy.Enabled {
 		go handleServerProxy()
 	}
 
 	http.HandleFunc("/echo", echoHandler)
-	http.HandleFunc(serverConfig.SubscribePath, statusHandler)
+	http.HandleFunc(serverConfig.RefereeConnection.SubscribePath, statusHandler)
+	http.HandleFunc(serverConfig.VisionConnection.SubscribePath, visionHandler)
 	log.Fatal(http.ListenAndServe(serverConfig.ListenAddress, nil))
 }

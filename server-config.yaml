@@ -1,9 +1,14 @@
 ListenAddress: ":4201"
-SubscribePath: "/ssl-status/subscribe"
-RefereeAddress: "224.5.23.1:10003"
-SendingInterval: "100ms"
+RefereeConnection:
+  SubscribePath: "/ssl-status/field-a/subscribe"
+  MulticastAddress: "224.5.23.1:10003"
+  SendingInterval: "100ms"
+VisionConnection:
+  SubscribePath: "/ssl-vision/field-a/subscribe"
+  MulticastAddress: "224.5.23.2:10006"
+  SendingInterval: "10ms"
 ServerProxy:
-  Enabled: true
+  Enabled: false
   Scheme: "ws"
   Address: "localhost:4202"
   Path: "/ssl-status/publish"

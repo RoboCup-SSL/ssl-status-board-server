@@ -3,8 +3,8 @@ package main
 import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"os"
 	"log"
+	"os"
 	"time"
 )
 
@@ -18,12 +18,17 @@ type ServerProxyConfig struct {
 	ReconnectInterval time.Duration `yaml:"ReconnectInterval"`
 }
 
+type ConnectionConfig struct {
+	SubscribePath    string        `yaml:"SubscribePath"`
+	SendingInterval  time.Duration `yaml:"SendingInterval"`
+	MulticastAddress string        `yaml:"MulticastAddress"`
+}
+
 type ServerConfig struct {
-	ServerProxy     ServerProxyConfig `yaml:"ServerProxy"`
-	ListenAddress   string            `yaml:"ListenAddress"`
-	SubscribePath   string            `yaml:"SubscribePath"`
-	RefereeAddress  string            `yaml:"RefereeAddress"`
-	SendingInterval time.Duration     `yaml:"SendingInterval"`
+	ServerProxy       ServerProxyConfig `yaml:"ServerProxy"`
+	ListenAddress     string            `yaml:"ListenAddress"`
+	RefereeConnection ConnectionConfig  `yaml:"RefereeConnection"`
+	VisionConnection  ConnectionConfig  `yaml:"VisionConnection"`
 }
 
 func ReadServerConfig(fileName string) ServerConfig {
