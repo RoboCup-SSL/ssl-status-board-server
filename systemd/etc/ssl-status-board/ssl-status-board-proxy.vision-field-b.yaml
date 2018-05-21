@@ -1,4 +1,4 @@
-ListenAddress: ":4202"
+ListenAddress: ":4205"
 SubscribePath: "/ssl-vision/field-b/subscribe"
 PublishPath: "/ssl-vision/field-b/publish"
 AuthCredentials:
