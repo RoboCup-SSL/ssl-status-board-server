@@ -1,0 +1,6 @@
+ListenAddress: ":4202"
+SubscribePath: "/ssl-vision/field-b/subscribe"
+PublishPath: "/ssl-vision/field-b/publish"
+AuthCredentials:
+ - Username: "default"
+   Password: "default"

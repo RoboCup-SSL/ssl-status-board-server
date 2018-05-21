@@ -137,11 +137,11 @@ func sendVisionDataToWebSocket(conn *websocket.Conn) {
 	}
 }
 
-func broadcastToProxy() error {
-	u := url.URL{Scheme: serverConfig.ServerProxy.Scheme, Host: serverConfig.ServerProxy.Address, Path: serverConfig.ServerProxy.Path}
+func broadcastToProxy(proxyConfig ServerProxyConfig, handler func(*websocket.Conn)) error {
+	u := url.URL{Scheme: proxyConfig.Scheme, Host: proxyConfig.Address, Path: proxyConfig.Path}
 	log.Printf("connecting to %s", u.String())
 
-	auth := []byte(serverConfig.ServerProxy.User + ":" + serverConfig.ServerProxy.Password)
+	auth := []byte(proxyConfig.User + ":" + proxyConfig.Password)
 	authBase64 := base64.StdEncoding.EncodeToString(auth)
 
 	requestHeader := http.Header{}
@@ -152,16 +152,16 @@ func broadcastToProxy() error {
 	}
 	defer conn.Close()
 
-	sendRefereeDataToWebSocket(conn)
+	handler(conn)
 	return nil
 }
 
-func handleServerProxy() {
+func handleServerProxy(proxyConfig ServerProxyConfig, handler func(*websocket.Conn)) {
 	for {
-		err := broadcastToProxy()
+		err := broadcastToProxy(proxyConfig, handler)
 		log.Println("Disconnected from proxy ", err)
 		if err != nil {
-			time.Sleep(serverConfig.ServerProxy.ReconnectInterval)
+			time.Sleep(proxyConfig.ReconnectInterval)
 		}
 	}
 }
@@ -177,8 +177,11 @@ func main() {
 	go handleIncomingRefereeMessages()
 	go handleIncomingVisionMessages()
 
-	if serverConfig.ServerProxy.Enabled {
-		go handleServerProxy()
+	if serverConfig.RefereeConnection.ServerProxy.Enabled {
+		go handleServerProxy(serverConfig.RefereeConnection.ServerProxy, sendRefereeDataToWebSocket)
+	}
+	if serverConfig.VisionConnection.ServerProxy.Enabled {
+		go handleServerProxy(serverConfig.VisionConnection.ServerProxy, sendVisionDataToWebSocket)
 	}
 
 	http.HandleFunc("/echo", echoHandler)

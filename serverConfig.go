@@ -19,16 +19,16 @@ type ServerProxyConfig struct {
 }
 
 type ConnectionConfig struct {
-	SubscribePath    string        `yaml:"SubscribePath"`
-	SendingInterval  time.Duration `yaml:"SendingInterval"`
-	MulticastAddress string        `yaml:"MulticastAddress"`
+	SubscribePath    string            `yaml:"SubscribePath"`
+	SendingInterval  time.Duration     `yaml:"SendingInterval"`
+	MulticastAddress string            `yaml:"MulticastAddress"`
+	ServerProxy      ServerProxyConfig `yaml:"ServerProxy"`
 }
 
 type ServerConfig struct {
-	ServerProxy       ServerProxyConfig `yaml:"ServerProxy"`
-	ListenAddress     string            `yaml:"ListenAddress"`
-	RefereeConnection ConnectionConfig  `yaml:"RefereeConnection"`
-	VisionConnection  ConnectionConfig  `yaml:"VisionConnection"`
+	ListenAddress     string           `yaml:"ListenAddress"`
+	RefereeConnection ConnectionConfig `yaml:"RefereeConnection"`
+	VisionConnection  ConnectionConfig `yaml:"VisionConnection"`
 }
 
 func ReadServerConfig(fileName string) ServerConfig {

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
-	"net/http"
-	"log"
 	"flag"
+	"github.com/gorilla/websocket"
+	"log"
+	"net/http"
 )
 
 var upgrader = websocket.Upgrader{
@@ -18,32 +18,32 @@ type WsMessage struct {
 	data        []byte
 }
 
-var statusChannel = make(chan WsMessage, 100)
+var messageChannel = make(chan WsMessage, 100)
 var clientConnections []*websocket.Conn
-var statusProviderConnected = false
+var messageProviderConnected = false
 var credentials []string
 var proxyConfig ProxyConfig
 
-func receiveStatusHandler(w http.ResponseWriter, r *http.Request) {
+func receiveHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, password, ok := r.BasicAuth()
 	if !ok {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("You have to authenticate yourself."))
-		log.Println("Status provider tried to connect without credentials")
+		log.Println("Message provider tried to connect without credentials")
 		return
 	}
 	if !validCredentials(user, password) {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte("Your credentials are invalid."))
-		log.Println("Status provider tried to connect with wrong credentials:", user, password)
+		log.Println("Message provider tried to connect with wrong credentials:", user, password)
 		return
 	}
 
-	if statusProviderConnected {
+	if messageProviderConnected {
 		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte("There is already a status provider connected!"))
-		log.Println("Another status provider tried to connect")
+		w.Write([]byte("There is already a message provider connected!"))
+		log.Println("Another message provider tried to connect")
 		return
 	}
 
@@ -52,9 +52,9 @@ func receiveStatusHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	defer disconnectStatusProvider(conn)
+	defer disconnectMessageProvider(conn)
 
-	log.Println("Status provider connected")
+	log.Println("Message provider connected")
 
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -62,7 +62,7 @@ func receiveStatusHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		statusChannel <- WsMessage{messageType, p}
+		messageChannel <- WsMessage{messageType, p}
 	}
 }
 
@@ -76,15 +76,15 @@ func validCredentials(user string, password string) bool {
 	return false
 }
 
-func disconnectStatusProvider(conn *websocket.Conn) {
+func disconnectMessageProvider(conn *websocket.Conn) {
 	log.Println("Status provider disconnected")
-	statusProviderConnected = false
+	messageProviderConnected = false
 	conn.Close()
 }
 
-func sendStatus() {
+func sendMessages() {
 	for {
-		wsMsg := <-statusChannel
+		wsMsg := <-messageChannel
 
 		for _, conn := range clientConnections {
 			if err := conn.WriteMessage(wsMsg.messageType, wsMsg.data); err != nil {
@@ -106,7 +106,7 @@ func remove(in []*websocket.Conn, conn *websocket.Conn) (out []*websocket.Conn) 
 	return
 }
 
-func serveStatusHandler(w http.ResponseWriter, r *http.Request) {
+func serveHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
@@ -133,9 +133,9 @@ func main() {
 
 	loadCredentials()
 
-	go sendStatus()
-	http.HandleFunc(proxyConfig.SubscribePath, serveStatusHandler)
-	http.HandleFunc(proxyConfig.PublishPath, receiveStatusHandler)
+	go sendMessages()
+	http.HandleFunc(proxyConfig.SubscribePath, serveHandler)
+	http.HandleFunc(proxyConfig.PublishPath, receiveHandler)
 	log.Println("Start listener on", proxyConfig.ListenAddress)
 	log.Fatal(http.ListenAndServe(proxyConfig.ListenAddress, nil))
 }
