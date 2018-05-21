@@ -6,7 +6,7 @@ RefereeConnection:
 VisionConnection:
   SubscribePath: "/ssl-vision/field-a/subscribe"
   MulticastAddress: "224.5.23.2:10006"
-  SendingInterval: "10ms"
+  SendingInterval: "25ms"
 ServerProxy:
   Enabled: false
   Scheme: "ws"

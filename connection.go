@@ -55,7 +55,9 @@ func handleIncomingVisionMessages() {
 			log.Print("Could not parse referee message: ", err)
 		} else {
 			if message.Detection != nil {
-				latestVisionDetection = message.Detection
+				visionDetectionMutex.Lock()
+				latestVisionDetection[int(*message.Detection.CameraId)] = message.Detection
+				visionDetectionMutex.Unlock()
 			}
 			if message.Geometry != nil {
 				latestVisionGeometry = message.Geometry

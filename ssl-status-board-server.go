@@ -9,8 +9,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -23,9 +25,11 @@ var upgrader = websocket.Upgrader{
 }
 
 var serverConfig ServerConfig
-var latestVisionDetection *sslproto.SSL_DetectionFrame
+var latestVisionDetection = map[int]*sslproto.SSL_DetectionFrame{}
 var latestVisionGeometry *sslproto.SSL_GeometryData
 var lastTimeGeometrySend = time.Now()
+var visionDetectionMutex = &sync.Mutex{}
+var lastDetectionTimestamp = 0.0
 
 func echoHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -91,12 +95,33 @@ func sendRefereeDataToWebSocket(conn *websocket.Conn) {
 }
 
 func sendVisionDataToWebSocket(conn *websocket.Conn) {
+	first := true
 	for {
 		wrapper := new(sslproto.SSL_WrapperPacket)
-		wrapper.Detection = latestVisionDetection
-		if latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > time.Second*5 {
+		wrapper.Detection = new(sslproto.SSL_DetectionFrame)
+		wrapper.Detection.CameraId = new(uint32)
+		wrapper.Detection.FrameNumber = new(uint32)
+		wrapper.Detection.TCapture = new(float64)
+		wrapper.Detection.TSent = new(float64)
+		visionDetectionMutex.Lock()
+		for _, r := range latestVisionDetection {
+			if *r.TCapture-lastDetectionTimestamp < 1 {
+				// frame is too old
+				continue
+			}
+			*wrapper.Detection.TCapture = math.Max(*wrapper.Detection.TCapture, *r.TCapture)
+			*wrapper.Detection.TSent = math.Max(*wrapper.Detection.TSent, *r.TSent)
+			*wrapper.Detection.FrameNumber = uint32(math.Max(float64(*wrapper.Detection.FrameNumber), float64(*r.FrameNumber)))
+			wrapper.Detection.Balls = append(wrapper.Detection.Balls, r.Balls...)
+			wrapper.Detection.RobotsBlue = append(wrapper.Detection.RobotsBlue, r.RobotsBlue...)
+			wrapper.Detection.RobotsYellow = append(wrapper.Detection.RobotsYellow, r.RobotsYellow...)
+		}
+		lastDetectionTimestamp = *wrapper.Detection.TCapture
+		visionDetectionMutex.Unlock()
+		if first || latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > time.Second*10 {
 			lastTimeGeometrySend = time.Now()
 			wrapper.Geometry = latestVisionGeometry
+			first = false
 		}
 
 		b, err := proto.Marshal(wrapper)
