@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  labels:
+    io.kompose.service: ssl-status-board-server-loadtest
+  name: ssl-status-board-server-loadtest
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: ssl-status-board-server-loadtest:latest
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    binary:
+      asFile: ""
+    type: Binary
+  strategy:
+    dockerStrategy: {}
+    type: Docker
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange
+  nodeSelector:
+status:
+  lastVersion: 0

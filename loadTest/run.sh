@@ -1,5 +1,3 @@
 #!/usr/bin/env bash
 
-users=100
-
-k6 run config.js -u $users -i $users
+k6 run --out influxdb=http://influxdb-svc:8086/k6 config.js

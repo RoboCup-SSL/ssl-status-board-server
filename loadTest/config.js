@@ -1,11 +1,17 @@
 import ws from "k6/ws";
-import {check} from "k6";
+import {check, sleep} from "k6";
 
-let connectionDuration = 60;
+let minConnectionDuration = 10;
+let maxConnectionDuration = 60;
+let users = 400;
+let iterationsPerUser = 2;
+let maxPauseTime = 30;
 
 // noinspection JSUnusedGlobalSymbols
 export let options = {
     noConnectionReuse: true,
+    iterations: users * iterationsPerUser,
+    vus: users,
 };
 
 // noinspection JSUnusedGlobalSymbols
@@ -15,23 +21,19 @@ export default function () {
 
     let packagesReceived = 0;
 
+    sleep(Math.random() * maxPauseTime);
+
+    const connectionDuration = Math.round(minConnectionDuration + Math.random() * (maxConnectionDuration - minConnectionDuration)) * 1000;
+
     const res = ws.connect(url, params, function (socket) {
-        socket.on('open', function () {
-            //console.log('connected');
-        });
 
         socket.on('message', function (data) {
             packagesReceived++;
-            //console.log("Message received: ", data);
-        });
-
-        socket.on('close', function () {
-            //console.log('disconnected');
         });
 
         socket.setTimeout(function () {
             socket.close();
-        }, connectionDuration * 1000);
+        }, connectionDuration);
     });
 
     check(res, {"status is 101": (r) => r && r.status === 101});

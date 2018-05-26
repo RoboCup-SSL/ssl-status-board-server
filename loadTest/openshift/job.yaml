@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ssl-status-board-server-loadtest
+spec:
+  parallelism: 5
+  completions: 5
+  template:
+    metadata:
+      name: ssl-status-board-server-loadtest
+    spec:
+      containers:
+      - name: ssl-status-board-server-loadtest
+        image: 172.30.111.222:5000/nom-playground/ssl-status-board-server-loadtest
+      restartPolicy: Never
