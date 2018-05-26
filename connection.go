@@ -5,6 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"log"
 	"net"
+	"time"
 )
 
 func handleIncomingRefereeMessages() {
@@ -56,7 +57,9 @@ func handleIncomingVisionMessages() {
 		} else {
 			if message.Detection != nil {
 				visionDetectionMutex.Lock()
-				latestVisionDetection[int(*message.Detection.CameraId)] = message.Detection
+				camId := int(*message.Detection.CameraId)
+				latestVisionDetection[camId] = message.Detection
+				visionDetectionReceived[camId] = time.Now()
 				visionDetectionMutex.Unlock()
 			}
 			if message.Geometry != nil {

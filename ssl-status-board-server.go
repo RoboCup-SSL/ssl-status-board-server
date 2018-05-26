@@ -26,10 +26,10 @@ var upgrader = websocket.Upgrader{
 
 var serverConfig ServerConfig
 var latestVisionDetection = map[int]*sslproto.SSL_DetectionFrame{}
+var visionDetectionReceived = map[int]time.Time{}
 var latestVisionGeometry *sslproto.SSL_GeometryData
 var lastTimeGeometrySend = time.Now()
 var visionDetectionMutex = &sync.Mutex{}
-var lastDetectionTimestamp = 0.0
 
 func echoHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -104,11 +104,8 @@ func sendVisionDataToWebSocket(conn *websocket.Conn) {
 		wrapper.Detection.TCapture = new(float64)
 		wrapper.Detection.TSent = new(float64)
 		visionDetectionMutex.Lock()
+		removeOldCamDetections()
 		for _, r := range latestVisionDetection {
-			if *r.TCapture-lastDetectionTimestamp < 1 {
-				// frame is too old
-				continue
-			}
 			*wrapper.Detection.TCapture = math.Max(*wrapper.Detection.TCapture, *r.TCapture)
 			*wrapper.Detection.TSent = math.Max(*wrapper.Detection.TSent, *r.TSent)
 			*wrapper.Detection.FrameNumber = uint32(math.Max(float64(*wrapper.Detection.FrameNumber), float64(*r.FrameNumber)))
@@ -116,7 +113,6 @@ func sendVisionDataToWebSocket(conn *websocket.Conn) {
 			wrapper.Detection.RobotsBlue = append(wrapper.Detection.RobotsBlue, r.RobotsBlue...)
 			wrapper.Detection.RobotsYellow = append(wrapper.Detection.RobotsYellow, r.RobotsYellow...)
 		}
-		lastDetectionTimestamp = *wrapper.Detection.TCapture
 		visionDetectionMutex.Unlock()
 		if first || (latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > serverConfig.GeometrySendingInterval) {
 			lastTimeGeometrySend = time.Now()
@@ -127,13 +123,20 @@ func sendVisionDataToWebSocket(conn *websocket.Conn) {
 		b, err := proto.Marshal(wrapper)
 		if err != nil {
 			fmt.Println("Marshal error:", err)
-		}
-		if err := conn.WriteMessage(websocket.BinaryMessage, b); err != nil {
+		} else if err := conn.WriteMessage(websocket.BinaryMessage, b); err != nil {
 			log.Println(err)
 			return
 		}
 
 		time.Sleep(serverConfig.VisionConnection.SendingInterval)
+	}
+}
+
+func removeOldCamDetections() {
+	for camId, r := range visionDetectionReceived {
+		if time.Now().Sub(r) > time.Second {
+			delete(visionDetectionReceived, camId)
+		}
 	}
 }
 
