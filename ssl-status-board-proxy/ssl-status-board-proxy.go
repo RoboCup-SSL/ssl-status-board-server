@@ -18,8 +18,7 @@ type WsMessage struct {
 	data        []byte
 }
 
-var messageChannel = make(chan WsMessage, 100)
-var clientConnections []*websocket.Conn
+var messageChannels []chan WsMessage
 var messageProviderConnected = false
 var credentials []string
 var proxyConfig ProxyConfig
@@ -62,7 +61,9 @@ func receiveHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		messageChannel <- WsMessage{messageType, p}
+		for _, c := range messageChannels {
+			c <- WsMessage{messageType, p}
+		}
 	}
 }
 
@@ -82,24 +83,27 @@ func disconnectMessageProvider(conn *websocket.Conn) {
 	conn.Close()
 }
 
-func sendMessages() {
-	for {
-		wsMsg := <-messageChannel
+func sendMessages(conn *websocket.Conn) {
+	c := make(chan WsMessage, 10)
+	messageChannels = append(messageChannels, c)
+	log.Printf("Client connected, now %d clients.\n", len(messageChannels))
 
-		for _, conn := range clientConnections {
-			if err := conn.WriteMessage(wsMsg.messageType, wsMsg.data); err != nil {
-				log.Println(err)
-				clientConnections = remove(clientConnections, conn)
-				conn.Close()
-			}
+	for {
+		wsMsg := <-c
+
+		if err := conn.WriteMessage(wsMsg.messageType, wsMsg.data); err != nil {
+			log.Println(err)
+			messageChannels = remove(messageChannels, c)
+			conn.Close()
+			return
 		}
 	}
 }
 
-func remove(in []*websocket.Conn, conn *websocket.Conn) (out []*websocket.Conn) {
-	out = []*websocket.Conn{}
+func remove(in []chan WsMessage, rem chan WsMessage) (out []chan WsMessage) {
+	out = []chan WsMessage{}
 	for _, c := range in {
-		if conn != c {
+		if rem != c {
 			out = append(out, c)
 		}
 	}
@@ -112,9 +116,8 @@ func serveHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	clientConnections = append(clientConnections, conn)
 
-	log.Printf("Client connected, now %d clients.\n", len(clientConnections))
+	go sendMessages(conn)
 }
 
 func loadCredentials() {
@@ -133,7 +136,6 @@ func main() {
 
 	loadCredentials()
 
-	go sendMessages()
 	http.HandleFunc(proxyConfig.SubscribePath, serveHandler)
 	http.HandleFunc(proxyConfig.PublishPath, receiveHandler)
 	log.Println("Start listener on", proxyConfig.ListenAddress)
