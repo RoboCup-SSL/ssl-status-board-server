@@ -118,7 +118,7 @@ func sendVisionDataToWebSocket(conn *websocket.Conn) {
 		}
 		lastDetectionTimestamp = *wrapper.Detection.TCapture
 		visionDetectionMutex.Unlock()
-		if first || latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > time.Second*10 {
+		if first || (latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > serverConfig.GeometrySendingInterval) {
 			lastTimeGeometrySend = time.Now()
 			wrapper.Geometry = latestVisionGeometry
 			first = false

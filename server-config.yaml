@@ -1,4 +1,5 @@
 ListenAddress: ":4201"
+GeometrySendingInterval: "5s"
 RefereeConnection:
   SubscribePath: "/ssl-status/field-a/subscribe"
   MulticastAddress: "224.5.23.1:10003"

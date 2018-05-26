@@ -26,9 +26,10 @@ type ConnectionConfig struct {
 }
 
 type ServerConfig struct {
-	ListenAddress     string           `yaml:"ListenAddress"`
-	RefereeConnection ConnectionConfig `yaml:"RefereeConnection"`
-	VisionConnection  ConnectionConfig `yaml:"VisionConnection"`
+	ListenAddress           string           `yaml:"ListenAddress"`
+	RefereeConnection       ConnectionConfig `yaml:"RefereeConnection"`
+	VisionConnection        ConnectionConfig `yaml:"VisionConnection"`
+	GeometrySendingInterval time.Duration    `yaml:"GeometrySendingInterval"`
 }
 
 func ReadServerConfig(fileName string) ServerConfig {
