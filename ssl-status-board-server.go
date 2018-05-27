@@ -9,7 +9,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"log"
-	"math"
 	"net/http"
 	"net/url"
 	"sync"
@@ -97,26 +96,19 @@ func sendRefereeDataToWebSocket(conn *websocket.Conn) {
 func sendVisionDataToWebSocket(conn *websocket.Conn) {
 	first := true
 	for {
-		wrapper := new(sslproto.SSL_WrapperPacket)
-		wrapper.Detection = new(sslproto.SSL_DetectionFrame)
-		wrapper.Detection.CameraId = new(uint32)
-		wrapper.Detection.FrameNumber = new(uint32)
-		wrapper.Detection.TCapture = new(float64)
-		wrapper.Detection.TSent = new(float64)
+		wrapper := new(sslproto.SSL_Micro_WrapperPacket)
+		wrapper.Detection = new(sslproto.SSL_Micro_DetectionFrame)
 		visionDetectionMutex.Lock()
 		removeOldCamDetections()
 		for _, r := range latestVisionDetection {
-			*wrapper.Detection.TCapture = math.Max(*wrapper.Detection.TCapture, *r.TCapture)
-			*wrapper.Detection.TSent = math.Max(*wrapper.Detection.TSent, *r.TSent)
-			*wrapper.Detection.FrameNumber = uint32(math.Max(float64(*wrapper.Detection.FrameNumber), float64(*r.FrameNumber)))
-			wrapper.Detection.Balls = append(wrapper.Detection.Balls, r.Balls...)
-			wrapper.Detection.RobotsBlue = append(wrapper.Detection.RobotsBlue, r.RobotsBlue...)
-			wrapper.Detection.RobotsYellow = append(wrapper.Detection.RobotsYellow, r.RobotsYellow...)
+			wrapper.Detection.Balls = append(wrapper.Detection.Balls, micronizeBalls(r.Balls)...)
+			wrapper.Detection.RobotsBlue = append(wrapper.Detection.RobotsBlue, micronizeBots(r.RobotsBlue)...)
+			wrapper.Detection.RobotsYellow = append(wrapper.Detection.RobotsYellow, micronizeBots(r.RobotsYellow)...)
 		}
 		visionDetectionMutex.Unlock()
-		if first || (latestVisionGeometry != nil && time.Now().Sub(lastTimeGeometrySend) > serverConfig.GeometrySendingInterval) {
+		if latestVisionGeometry != nil && (first || time.Now().Sub(lastTimeGeometrySend) > serverConfig.GeometrySendingInterval) {
 			lastTimeGeometrySend = time.Now()
-			wrapper.Geometry = latestVisionGeometry
+			wrapper.Geometry = micronizeGeometry(latestVisionGeometry)
 			first = false
 		}
 
@@ -130,6 +122,69 @@ func sendVisionDataToWebSocket(conn *websocket.Conn) {
 
 		time.Sleep(serverConfig.VisionConnection.SendingInterval)
 	}
+}
+
+func micronizeBalls(balls []*sslproto.SSL_DetectionBall) (microBalls []*sslproto.SSL_Micro_DetectionBall) {
+	microBalls = make([]*sslproto.SSL_Micro_DetectionBall, len(balls))
+	for i, b := range balls {
+		microBalls[i] = new(sslproto.SSL_Micro_DetectionBall)
+		microBalls[i].X = b.X
+		microBalls[i].Y = b.Y
+	}
+	return
+}
+
+func micronizeBots(robots []*sslproto.SSL_DetectionRobot) (microRobots []*sslproto.SSL_Micro_DetectionRobot) {
+	microRobots = make([]*sslproto.SSL_Micro_DetectionRobot, len(robots))
+	for i, r := range robots {
+		microRobots[i] = new(sslproto.SSL_Micro_DetectionRobot)
+		microRobots[i].RobotId = r.RobotId
+		microRobots[i].X = r.X
+		microRobots[i].Y = r.Y
+		microRobots[i].Orientation = r.Orientation
+	}
+	return
+}
+
+func micronizeGeometry(geometry *sslproto.SSL_GeometryData) (microGeometry *sslproto.SSL_Micro_GeometryData) {
+	microGeometry = new(sslproto.SSL_Micro_GeometryData)
+	microGeometry.Field = new(sslproto.SSL_Micro_GeometryFieldSize)
+	microGeometry.Field.BoundaryWidth = geometry.Field.BoundaryWidth
+	microGeometry.Field.FieldLength = geometry.Field.FieldLength
+	microGeometry.Field.FieldWidth = geometry.Field.FieldWidth
+	microGeometry.Field.GoalDepth = geometry.Field.GoalDepth
+	microGeometry.Field.GoalWidth = geometry.Field.GoalWidth
+	microGeometry.Field.FieldLines = micronizeLines(geometry.Field.FieldLines)
+	microGeometry.Field.FieldArcs = micronizeArcs(geometry.Field.FieldArcs)
+	return
+}
+
+func micronizeLines(lines []*sslproto.SSL_FieldLineSegment) (microLines []*sslproto.SSL_Micro_FieldLineSegment) {
+	microLines = make([]*sslproto.SSL_Micro_FieldLineSegment, len(lines))
+	for i, r := range lines {
+		microLines[i] = new(sslproto.SSL_Micro_FieldLineSegment)
+		microLines[i].P1 = new(sslproto.Micro_Vector2F)
+		microLines[i].P1.X = r.P1.X
+		microLines[i].P1.Y = r.P1.Y
+		microLines[i].P2 = new(sslproto.Micro_Vector2F)
+		microLines[i].P2.X = r.P2.X
+		microLines[i].P2.Y = r.P2.Y
+	}
+	return
+}
+
+func micronizeArcs(arcs []*sslproto.SSL_FieldCicularArc) (microArcs []*sslproto.SSL_Micro_FieldCicularArc) {
+	microArcs = make([]*sslproto.SSL_Micro_FieldCicularArc, len(arcs))
+	for i, r := range arcs {
+		microArcs[i] = new(sslproto.SSL_Micro_FieldCicularArc)
+		microArcs[i].Center = new(sslproto.Micro_Vector2F)
+		microArcs[i].Center.X = r.Center.X
+		microArcs[i].Center.Y = r.Center.Y
+		microArcs[i].Radius = r.Radius
+		microArcs[i].A1 = r.A1
+		microArcs[i].A2 = r.A2
+	}
+	return
 }
 
 func removeOldCamDetections() {
