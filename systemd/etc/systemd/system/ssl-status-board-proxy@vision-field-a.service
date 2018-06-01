@@ -6,6 +6,7 @@ After=network.target
 PIDFile=/var/run/ssl-status-board-proxy.%i.pid
 User=status-board
 Group=nogroup
+LimitNOFILE=65536
 ExecStart=/usr/local/bin/ssl-status-board-proxy -c /etc/ssl-status-board/ssl-status-board-proxy.%i.yaml
 Restart=always
 TimeoutStartSec=10
