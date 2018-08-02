@@ -1,3 +1,8 @@
+![travis build](https://travis-ci.org/RoboCup-SSL/ssl-status-board-server.svg?branch=master "travis build status")
+[![Go Report Card](https://goreportcard.com/badge/github.com/RoboCup-SSL/ssl-status-board-server?style=flat-square)](https://goreportcard.com/report/github.com/RoboCup-SSL/ssl-status-board-server)
+[![Go Doc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/RoboCup-SSL/ssl-status-board-server)
+[![Release](https://img.shields.io/github/release/golang-standards/project-layout.svg?style=flat-square)](https://github.com/RoboCup-SSL/ssl-status-board-server/releases/latest)
+
 # SSL Status Board - Server
 The server component of the RoboCup SSL status board implemented in Go
 
