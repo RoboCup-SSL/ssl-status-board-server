@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/RoboCup-SSL/ssl-go-tools/sslproto"
+	"github.com/RoboCup-SSL/ssl-go-tools/pkg/sslproto"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"log"

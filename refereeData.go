@@ -1,6 +1,6 @@
 package main
 
-import "github.com/RoboCup-SSL/ssl-go-tools/sslproto"
+import "github.com/RoboCup-SSL/ssl-go-tools/pkg/sslproto"
 
 type Team struct {
 	Name            string
