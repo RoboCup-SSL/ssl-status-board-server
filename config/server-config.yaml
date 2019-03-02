@@ -1,0 +1,28 @@
+ListenAddress: ":4201"
+RefereeConnection:
+  Connection:
+    SubscribePath: "/ssl-status/field-a/subscribe"
+    MulticastAddress: "224.5.23.1:10003"
+    SendingInterval: "100ms"
+    ServerProxy:
+      Enabled: false
+      Scheme: "ws"
+      Address: "localhost:4202"
+      Path: "/ssl-status/publish"
+      User: "default"
+      Password: "default"
+      ReconnectInterval: "30s"
+VisionConnection:
+  GeometrySendingInterval: "5s"
+  Connection:
+    SubscribePath: "/ssl-vision/field-a/subscribe"
+    MulticastAddress: "224.5.23.2:10006"
+    SendingInterval: "25ms"
+    ServerProxy:
+      Enabled: false
+      Scheme: "ws"
+      Address: "localhost:4202"
+      Path: "/ssl-vision/publish"
+      User: "default"
+      Password: "default"
+      ReconnectInterval: "30s"

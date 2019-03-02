@@ -1,10 +1,10 @@
-package main
+package config
 
 import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"os"
 	"log"
+	"os"
 )
 
 type AuthCredential struct {
@@ -19,6 +19,7 @@ type ProxyConfig struct {
 	AuthCredentials []AuthCredential `yaml:"AuthCredentials"`
 }
 
+// ReadProxyConfig reads the proxy config from a yaml file
 func ReadProxyConfig(fileName string) ProxyConfig {
 	config := ProxyConfig{}
 	f, err := os.Open(fileName)
